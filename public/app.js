@@ -18,11 +18,49 @@ auth.onAuthStateChanged(user => {
     if (user) {
         whenSignedIn.hidden = false;
         whenSignedOut.hidden = true;
-        console.log(user);
         userDetails.innerHTML = `<h3>Hello ${user.displayName} !</h3> <p>User ID: ${user.uid} </p>`;
     } else {
         whenSignedIn.hidden = true;
         whenSignedOut.hidden = false;
         userDetails.innerHTML = '';
+    }
+});
+
+const db = firebase.firestore();
+
+const createThing = document.getElementById('createThing');
+const thingsList = document.getElementById('thingsList');
+
+let thingsRef;
+let unsubscribe;
+
+auth.onAuthStateChanged(user => {
+    if (user) {
+        thingsRef = db.collection('things');
+
+        createThing.onclick = () => {
+
+            const { serverTimestamp } = firebase.firestore.FieldValue;
+
+            thingsRef.add({
+                uid: user.uid,
+                name: faker.commerce.productName(),
+                createdAt: serverTimestamp()
+            });
+
+        }
+
+        unsubscribe = thingsRef
+            .where('uid', '==', user.uid)
+            .orderBy('createdAt')
+            .onSnapshot(querySnapshot => {
+                const items = querySnapshot.docs.map(doc => {
+                    return `<li>${doc.data().name}</li>`
+                });
+
+                thingsList.innerHTML = items.join('');
+            });
+    } else {
+        unsubscribe && unsubscribe();
     }
 });
